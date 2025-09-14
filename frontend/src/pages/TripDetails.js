@@ -237,7 +237,7 @@ const TripDetails = () => {
                     </div>
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span>Total</span>
-                      <span className="text-blue-600">${trip.price * selectedSeats.length}</span>
+                      <span className="text-blue-600">₹{trip.price * selectedSeats.length}</span>
                     </div>
                   </div>
 

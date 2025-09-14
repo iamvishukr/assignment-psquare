@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaSave } from "react-icons/fa";
+import { FaEdit, FaPlus, FaSave, FaCamera } from "react-icons/fa";
 import axios from "axios";
 
 export default function ManageProfile() {
   const [user, setUser] = useState(null);
-  const [editField, setEditField] = useState(null); 
+  const [editField, setEditField] = useState(null);
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
@@ -14,7 +14,10 @@ export default function ManageProfile() {
           withCredentials: true,
         });
         setUser(response.data.user);
-        setFormData(response.data.user); 
+        setFormData({
+          ...response.data.user,
+          password: "", // password field empty by default
+        });
       } catch (error) {
         console.error(
           "Error fetching profile:",
@@ -33,16 +36,26 @@ export default function ManageProfile() {
     }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (extraData) => {
     try {
+      const payload = {};
+      if (formData.name) payload.name = formData.name;
+      if (formData.email) payload.email = formData.email;
+      if (formData.password) payload.password = formData.password;
+      if (formData.phone) payload.phone = formData.phone;
+      if (formData.address) payload.address = formData.address;
+      if (formData.dateOfBirth) payload.dateOfBirth = formData.dateOfBirth;
+
+      const finalPayload = extraData ? { ...payload, ...extraData } : payload;
+
       const response = await axios.put(
         "http://localhost:5000/api/users/profile",
-        formData,
-        {
-          withCredentials: true,
-        }
+        finalPayload,
+        { withCredentials: true }
       );
+
       setUser(response.data.user);
+      setFormData((prev) => ({ ...prev, password: "" })); // reset password
       setEditField(null);
       alert("Profile updated successfully!");
     } catch (error) {
@@ -50,15 +63,38 @@ export default function ManageProfile() {
         "Error updating profile:",
         error.response?.data?.message || error.message
       );
+      alert(error.response?.data?.message || "Error updating profile");
     }
   };
 
-  if (!user) {
-    return <div className="text-center mt-20">Loading profile...</div>;
-  }
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const form = new FormData();
+    form.append("profileImage", file);
+
+    try {
+      const response = await axios.put(
+        "http://localhost:5000/api/users/profile",
+        form,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      setUser(response.data.user);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Image upload failed");
+    }
+  };
+
+  if (!user) return <div className="text-center mt-20">Loading profile...</div>;
 
   return (
-    <div className="mx-auto py-20 fl  ex flex-col items-center bg-gray-50 min-h-screen max-w-[1600px]">
+    <div className="mx-auto py-20 fl ex flex-col items-center bg-gray-50 min-h-screen max-w-[1600px]">
+      {/* Profile Header */}
       <div className="flex flex-col items-center space-y-2 mb-10">
         <div className="relative">
           <img
@@ -66,20 +102,29 @@ export default function ManageProfile() {
             alt="profile"
             className="w-28 h-28 rounded-full border-4 border-blue-500"
           />
-          <button className="absolute bottom-2 right-2 bg-red-400 p-2 rounded-full text-white shadow">
-            <FaEdit size={16} />
-          </button>
+          <label className="absolute bottom-2 right-2 bg-red-400 p-2 rounded-full text-white shadow cursor-pointer">
+            <FaCamera size={16} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </label>
         </div>
         <h2 className="text-xl font-semibold">{user.name}</h2>
         <p className="text-gray-500">{user.email}</p>
       </div>
 
+      {/* Section Title */}
       <div className="w-full p-4 md:p-8 ">
         <h3 className="text-3xl md:text-4xl mb-4 ml-4 md:ml-12 text-left">
           Account
         </h3>
       </div>
-      <div className="w-full  mx-auto bg-white shadow rounded-lg p-6 md:p-16">
+
+      {/* Editable Fields */}
+      <div className="w-full mx-auto bg-white shadow rounded-lg p-6 md:p-16">
         <div className="space-y-6">
           <Field
             label="Name"
@@ -88,7 +133,7 @@ export default function ManageProfile() {
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             buttonText="Change"
           />
 
@@ -99,18 +144,18 @@ export default function ManageProfile() {
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             buttonText="Add another email"
           />
 
           <Field
             label="Password"
             field="password"
-            value=""
+            value={formData.password}
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             isPassword={true}
             buttonText="Change"
           />
@@ -122,7 +167,7 @@ export default function ManageProfile() {
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             hideEdit={true}
           />
 
@@ -136,7 +181,7 @@ export default function ManageProfile() {
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             buttonText="Change"
           />
 
@@ -147,7 +192,7 @@ export default function ManageProfile() {
             editField={editField}
             setEditField={setEditField}
             handleChange={handleChange}
-            handleSave={handleSave}
+            handleSave={() => handleSave()}
             hideEdit={true}
           />
         </div>
@@ -169,9 +214,7 @@ function Field({
   buttonText,
 }) {
   const getEditIcon = () => {
-    if (buttonText === "Add another email") {
-      return <FaPlus size={14} />;
-    }
+    if (buttonText === "Add another email") return <FaPlus size={14} />;
     return <FaEdit size={14} />;
   };
 
@@ -187,7 +230,7 @@ function Field({
             className="border px-2 py-2 rounded"
           />
         ) : (
-          <p className="font-medium">{value}</p>
+          <p className="font-medium">{field === "password" ? "••••••" : value}</p>
         )}
       </div>
       {!hideEdit && (
