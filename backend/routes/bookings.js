@@ -87,19 +87,24 @@ router.post(
 
 router.get("/my-bookings", auth, async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).populate(
-      "trip"
-    );
+    const bookings = await Booking.find({ user: req.user._id }).populate("trip");
 
     const now = new Date();
-    const upcoming = bookings.filter((b) => new Date(b.trip.date) >= now);
-    const past = bookings.filter((b) => new Date(b.trip.date) < now);
 
-    res.json({ upcoming, past }); 
+    const upcoming = bookings.filter(
+      (b) => b.trip && new Date(b.trip.date) >= now
+    );
+    const past = bookings.filter(
+      (b) => b.trip && new Date(b.trip.date) < now
+    );
+
+    res.json({ upcoming, past });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    console.error("Error in /my-bookings:", err);
+    res.status(500).json({ error: "Server error", details: err.message });
   }
 });
+
 
 router.get("/", adminAuth, async (req, res) => {
   try {
@@ -138,6 +143,34 @@ router.get("/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+router.delete("/:id", adminAuth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate("trip");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (booking.trip) {
+      booking.trip.bookedSeats = booking.trip.bookedSeats.filter(
+        (seat) => !booking.seats.includes(seat)
+      );
+      booking.trip.availableSeats += booking.seats.length;
+      await booking.trip.save();
+    }
+
+    await booking.deleteOne();
+
+    res.json({ message: "Booking deleted successfully" });
+  } catch (error) {
+    console.error("DELETE booking error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+
+
 
 router.patch("/:id/cancel", auth, async (req, res) => {
   try {
